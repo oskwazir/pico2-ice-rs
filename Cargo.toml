@@ -1,0 +1,26 @@
+[package]
+name = "pico2-ice"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Board support for the tinyVision pico2-ice (RP2350B + iCE40UP5K)"
+repository = "https://github.com/oskwazir/pico2-ice-rs"
+
+[dependencies]
+embassy-rp = { version = "0.10", features = ["rp235xb", "time-driver", "critical-section-impl", "binary-info"] }
+embassy-time = "0.5"
+defmt = { version = "1", optional = true }
+
+[features]
+defmt = ["dep:defmt", "embassy-rp/defmt"]
+
+[dev-dependencies]
+embassy-executor = { version = "0.10", features = ["platform-cortex-m", "executor-thread", "defmt"] }
+embassy-time = { version = "0.5", features = ["defmt", "defmt-timestamp-uptime"] }
+cortex-m-rt = "0.7"
+defmt = "1"
+defmt-rtt = "1"
+panic-probe = { version = "1", features = ["print-defmt"] }
+
+[profile.release]
+debug = true
