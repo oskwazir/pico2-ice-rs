@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT OR Apache-2.0 */
+
 MEMORY {
     /*
      * The RP2350 has either external or internal flash.
