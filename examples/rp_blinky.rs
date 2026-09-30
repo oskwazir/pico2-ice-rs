@@ -1,6 +1,8 @@
-//! This example test the pico2-ice on board LED.
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+//! Blinks the pico2-ice's red RP2350 LED on GPIO 1.
 //!
-//! It does not work with the pico2-ice W board. See `blinky_wifi.rs`.
+//! The LED is active-low: driving the pin low turns it on.
 
 #![no_std]
 #![no_main]
@@ -17,9 +19,9 @@ use {defmt_rtt as _, panic_probe as _};
 #[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 4] = [
-    embassy_rp::binary_info::rp_program_name!(c"Blinky Example"),
+    embassy_rp::binary_info::rp_program_name!(c"pico2-ice rp_blinky"),
     embassy_rp::binary_info::rp_program_description!(
-        c"This example tests the pico2-ice on board LED, connected to gpio 1"
+        c"Blinks the red RP2350 LED on GPIO 1"
     ),
     embassy_rp::binary_info::rp_cargo_version!(),
     embassy_rp::binary_info::rp_program_build_attribute!(),
