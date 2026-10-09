@@ -10,6 +10,7 @@ repository = "https://github.com/oskwazir/pico2-ice-rs"
 embassy-rp = { version = "0.10", features = ["rp235xb", "time-driver", "critical-section-impl", "binary-info"] }
 embassy-time = "0.5"
 defmt = { version = "1", optional = true }
+pico2-ice-core = { path = "core" }
 
 [features]
 defmt = ["dep:defmt", "embassy-rp/defmt"]
@@ -24,3 +25,9 @@ panic-probe = { version = "1", features = ["print-defmt"] }
 
 [profile.release]
 debug = true
+
+[workspace]
+members = ["core"]
+
+[workspace.package]
+edition = "2024"

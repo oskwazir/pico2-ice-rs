@@ -20,9 +20,7 @@ use {defmt_rtt as _, panic_probe as _};
 #[used]
 pub static PICOTOOL_ENTRIES: [embassy_rp::binary_info::EntryAddr; 4] = [
     embassy_rp::binary_info::rp_program_name!(c"pico2-ice rp_blinky"),
-    embassy_rp::binary_info::rp_program_description!(
-        c"Blinks the red RP2350 LED on GPIO 1"
-    ),
+    embassy_rp::binary_info::rp_program_description!(c"Blinks the red RP2350 LED on GPIO 1"),
     embassy_rp::binary_info::rp_cargo_version!(),
     embassy_rp::binary_info::rp_program_build_attribute!(),
 ];
