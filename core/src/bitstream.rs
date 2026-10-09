@@ -17,18 +17,23 @@ const SYNC_SEARCH_WINDOW: usize = 256;
 /// Validates the bitstream header only. It does not validate the rest of the file. A truncated or corrupt bitstream still passes!
 /// https://prjicestorm.readthedocs.io/en/latest/format.html
 pub fn check(data: &[u8]) -> Result<(), NotABitstream> {
+    // if data does not start with MAGIC then return NotABitstream error
     if !data.starts_with(&MAGIC) {
         return Err(NotABitstream);
     }
 
+    // look for SYNC_WORD in the SYNC_SEARCH_WINDOW range
     let has_sync_word: bool = data[..data.len().min(SYNC_SEARCH_WINDOW)]
         .windows(SYNC_WORD.len())
         .any(|w| w == SYNC_WORD);
 
+    // if data does not have SYNC_WORD in the SYNC_SEARCH_WINDOW range, return NotABitstream error
     if !has_sync_word {
         return Err(NotABitstream);
     }
 
+    // This does not check for correctness of the bitstream beyond the checks above
+    // so Ok just means the header is okay
     Ok(())
 }
 
