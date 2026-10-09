@@ -15,7 +15,8 @@ const SYNC_WORD: [u8; 4] = [0x7E, 0xAA, 0x99, 0x7E];
 const SYNC_SEARCH_WINDOW: usize = 256;
 
 /// Validates the bitstream header only. It does not validate the rest of the file. A truncated or corrupt bitstream still passes!
-/// https://prjicestorm.readthedocs.io/en/latest/format.html
+///
+/// <https://prjicestorm.readthedocs.io/en/latest/format.html>
 pub fn check(data: &[u8]) -> Result<(), NotABitstream> {
     // if data does not start with MAGIC then return NotABitstream error
     if !data.starts_with(&MAGIC) {
@@ -48,22 +49,24 @@ mod tests {
 
     #[test]
     fn shorter_than_header_is_rejected() {
-        let data: [u8; 5] = [0xFF, 0x00, 0x00, 0xFF, 0x7E];
-        assert_eq!(check(&data), Err(NotABitstream));
+        assert_eq!(check(b"\xFF\x00\x00\xFF\x7E"), Err(NotABitstream));
     }
 
     #[test]
     fn wrong_first_byte_is_rejected() {
         // First byte is incorrect - should be 0xFF from MAGIC
-        let data: [u8; 8] = [0x00, 0x00, 0x00, 0xFF, 0x7E, 0xAA, 0x99, 0x7E];
-        assert_eq!(check(&data), Err(NotABitstream));
+        assert_eq!(
+            check(b"\x00\x00\x00\xFF\x7E\xAA\x99\x7E"),
+            Err(NotABitstream)
+        );
     }
 
     #[test]
     fn no_sync_word_is_rejected() {
-        let mut data = [0u8; 16];
-        data[..MAGIC.len()].copy_from_slice(&MAGIC);
-        assert_eq!(check(&data), Err(NotABitstream));
+        assert_eq!(
+            check(b"\xFF\x00\x00\xFF\x00\x00\x00\x00"),
+            Err(NotABitstream)
+        );
     }
 
     #[test]
@@ -83,14 +86,17 @@ mod tests {
     }
 
     #[test]
-    fn sdk_rgb_blink_is_accepted() {
-        let rgb_blink: &[u8] = include_bytes!("testdata/rgb_blink.bin");
-        assert_eq!(check(rgb_blink), Ok(()));
+    fn sync_word_after_comment_is_accepted() {
+        // FF 00, one zero-terminated comment, 00 FF, then the sync word
+        assert_eq!(
+            check(b"\xFF\x00Part: iCE40UP5K-SG48\x00\x00\xFF\x7E\xAA\x99\x7E"),
+            Ok(())
+        );
     }
 
     #[test]
-    fn factory_gateware_is_accepted() {
-        let factory_gateware: &[u8] = include_bytes!("testdata/factory-gateware.bin");
-        assert_eq!(check(factory_gateware), Ok(()));
+    fn sdk_rgb_blink_is_accepted() {
+        let rgb_blink: &[u8] = include_bytes!("testdata/rgb_blink.bin");
+        assert_eq!(check(rgb_blink), Ok(()));
     }
 }
