@@ -4,3 +4,4 @@
 //! Hardware-independent logic for the pico2-ice crate; no_std, testable on the host.
 
 pub mod bitstream;
+pub mod clock;
