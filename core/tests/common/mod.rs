@@ -32,7 +32,6 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-
 pub struct Entry {
     /// Fake time when the event happened.
     pub at_ns: u64,
@@ -91,11 +90,29 @@ impl Recorder {
 
     /// Fake time from the first `from` to the first `to` after it.
     pub fn time_between(&self, from: Event, to: Event) -> Option<u64> {
-        todo!("slice 3")
+        let log = self.0.borrow();
+        let start = log.entries.iter().position(|e| e.event == from)?;
+        let end = log.entries[start..].iter().find(|e| e.event == to)?;
+        Some(end.at_ns - log.entries[start].at_ns)
     }
 
+    /// How many times `pin` went from low to high.
+    /// A repeated `set_high` or high to low is not a rising edge.
     pub fn rising_edges(&self, pin: Pin) -> u32 {
-        todo!("slice 3")
+        let mut high = false;
+        let mut count = 0;
+        for entry in self.0.borrow().entries.iter() {
+            match entry.event {
+                Event::Set(p, level) if p == pin => {
+                    if level && !high {
+                        count += 1;
+                    }
+                    high = level;
+                }
+                _ => {}
+            }
+        }
+        count
     }
 
     fn push(&self, event: Event) {
@@ -149,7 +166,11 @@ impl ErrorType for FakeCdone {
 
 impl InputPin for FakeCdone {
     fn is_high(&mut self) -> Result<bool, Self::Error> {
-        todo!("slice 3")
+        let high = match self.edges {
+            Some(n) => self.recorder.rising_edges(Pin::Sck) >= n,
+            None => false,
+        };
+        Ok(high)
     }
 
     fn is_low(&mut self) -> Result<bool, Self::Error> {
