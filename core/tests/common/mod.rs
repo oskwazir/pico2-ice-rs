@@ -66,7 +66,9 @@ impl Recorder {
         }
     }
 
-    /// A CDONE that goes high once SCK has had `edges` rising edges, or never for `None`
+    /// A CDONE which goes high once SCK has had `edges` as rising edges, or never for `None`.
+    /// It counts every rising SCK edge since the log began, including the loader's first `set_high`
+    /// which only sets the idle level.
     pub fn cdone_after(&self, edges: Option<u32>) -> FakeCdone {
         FakeCdone {
             edges,
@@ -92,7 +94,7 @@ impl Recorder {
     pub fn time_between(&self, from: Event, to: Event) -> Option<u64> {
         let log = self.0.borrow();
         let start = log.entries.iter().position(|e| e.event == from)?;
-        let end = log.entries[start..].iter().find(|e| e.event == to)?;
+        let end = log.entries[start + 1..].iter().find(|e| e.event == to)?;
         Some(end.at_ns - log.entries[start].at_ns)
     }
 
