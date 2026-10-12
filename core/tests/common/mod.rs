@@ -2,8 +2,44 @@
 
 //! Fake pins and a fake delay that write to one shared timestamped log.
 //!
-//! Each file in `tests/` is compiled as its own crate and pulls this in with `mod common;`.
-//! A file that uses only part of the harness would warn about the rest, hence the allow.
+//! Code under test takes its pins and delay as `embedded-hal` traits. A test passes it
+//! these fakes, then checks the log for what was driven, in what order and how far
+//! apart.
+//! All are made from one `Recorder` and write to its log.
+//!
+//! - `output(pin)`: an `OutputPin`
+//! - `delay()`: a `DelayNs` that advances the fake clock and returns at once
+//! - `cdone_after(Some(n))`: an `InputPin` that is high after `n` rising SCK edges
+//! - `cdone_after(None)`: an `InputPin` that stays low
+//!
+//! # Example
+//!
+//! ```ignore
+//! let rec = Recorder::new();
+//! let mut cs = rec.output(Pin::Cs);
+//! let mut creset = rec.output(Pin::Creset);
+//! let mut delay = rec.delay();
+//!
+//! cs.set_low().unwrap();
+//! delay.delay_us(2);
+//! creset.set_high().unwrap();
+//!
+//! let gap = rec.time_between(Event::Set(Pin::Cs, false), Event::Set(Pin::Creset, true));
+//! assert!(gap >= Some(200));
+//! ```
+//!
+//! Queries: `entries`, `time_of`, `time_between`, `rising_edges`.
+//!
+//! # Behaviour
+//!
+//! - Times are in nanoseconds and change only when the fake delay is called.
+//! - Pins are assumed to start low, so a first `set_high` counts as a rising edge.
+//! - Every `set_low` and `set_high` is logged, including one that repeats the level.
+//! - Reads of CDONE are not logged.
+//! - `delay_us` and `delay_ms` above about 4.29 s are logged as more than one delay.
+//!
+//! Each file in `tests/` is its own crate. One that uses part of the harness would
+//! warn about the rest without the `allow` below.
 
 #![allow(dead_code)]
 
@@ -66,7 +102,7 @@ impl Recorder {
         }
     }
 
-    /// A CDONE which goes high once SCK has had `edges` as rising edges, or never for `None`.
+    /// A CDONE which goes high once SCK has had `edges` aches rising edges, or never for `None`.
     /// It counts every rising SCK edge since the log began, including the loader's first `set_high`
     /// which only sets the idle level.
     pub fn cdone_after(&self, edges: Option<u32>) -> FakeCdone {
