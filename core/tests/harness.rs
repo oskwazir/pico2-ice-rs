@@ -2,7 +2,7 @@
 
 mod common;
 
-use common::{Entry, Event, Pin, Recorder};
+use common::{Entry, Event, Levels, Pin, Recorder};
 use embedded_hal::delay::DelayNs;
 use embedded_hal::digital::{InputPin, OutputPin};
 
@@ -123,4 +123,59 @@ fn time_between_is_none_when_an_event_is_missing() {
         rec.time_between(Event::Set(Pin::Cs, false), Event::Set(Pin::Creset, true)),
         None
     );
+}
+
+#[test]
+fn a_step_carries_every_level_before_and_after_it() {
+    let rec = Recorder::new();
+    let mut cs = rec.output(Pin::Cs);
+    let mut sck = rec.output(Pin::Sck);
+
+    cs.set_high().unwrap();
+    sck.set_high().unwrap();
+
+    let steps = rec.steps();
+    assert_eq!(
+        steps[1].before,
+        Levels {
+            cs: true,
+            ..Levels::default()
+        }
+    );
+    assert_eq!(
+        steps[1].after,
+        Levels {
+            cs: true,
+            sck: true,
+            ..Levels::default()
+        }
+    );
+}
+
+#[test]
+fn rising_skips_a_repeated_set_high() {
+    let rec = Recorder::new();
+    let mut sck = rec.output(Pin::Sck);
+
+    sck.set_high().unwrap(); // edge
+    sck.set_high().unwrap(); // already high, not an edge
+    sck.set_low().unwrap();
+    sck.set_high().unwrap(); // edge
+
+    assert_eq!(rec.rising(Pin::Sck).len(), 2);
+}
+
+#[test]
+fn a_delay_step_leaves_the_levels_unchanged() {
+    let rec = Recorder::new();
+    let mut cs = rec.output(Pin::Cs);
+    let mut delay = rec.delay();
+
+    cs.set_high().unwrap();
+    delay.delay_ns(500);
+
+    let step = rec.steps()[1];
+    assert_eq!(step.event, Event::Delay(500));
+    assert_eq!(step.before, step.after);
+    assert!(step.after.cs);
 }

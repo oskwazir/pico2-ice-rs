@@ -28,7 +28,7 @@
 //! assert!(gap >= Some(200));
 //! ```
 //!
-//! Queries: `entries`, `time_of`, `time_between`, `rising_edges`.
+//! Queries: `entries`, `time_of`, `time_between`, `rising`, `rising_edges`, `steps`.
 //!
 //! # Behaviour
 //!
@@ -74,6 +74,50 @@ pub struct Entry {
     pub event: Event,
 }
 
+/// Pin levels at a point in time. `true` is High.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Levels {
+    pub creset: bool,
+    pub cs: bool,
+    pub sck: bool,
+    pub si: bool,
+}
+
+impl Levels {
+    pub fn get(&self, pin: Pin) -> bool {
+        match pin {
+            Pin::Creset => self.creset,
+            Pin::Cs => self.cs,
+            Pin::Sck => self.sck,
+            Pin::Si => self.si,
+        }
+    }
+
+    pub fn set(&mut self, pin: Pin, level: bool) {
+        match pin {
+            Pin::Creset => self.creset = level,
+            Pin::Cs => self.cs = level,
+            Pin::Sck => self.sck = level,
+            Pin::Si => self.si = level,
+        }
+    }
+}
+
+/// A log entry with pin levels immediately before and after the event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Step {
+    /// Simulated timestamp (in nanoseconds) when the event occurred, copied from the log
+    pub at_ns: u64,
+    /// The recorded action (a pin transition or delay start), copied from the log.
+    pub event: Event,
+    /// State of all four pins (`CRESET`, `CS`, `SCK`, `SI`) immediately before the event.
+    pub before: Levels,
+    /// State of all four pins immediately after the event.
+    ///
+    /// Identical to `before` when `event` is a delay.
+    pub after: Levels,
+}
+
 #[derive(Default)]
 struct Log {
     now_ns: u64,
@@ -102,9 +146,9 @@ impl Recorder {
         }
     }
 
-    /// A CDONE which goes high once SCK has had `edges` aches rising edges, or never for `None`.
-    /// It counts every rising SCK edge since the log began, including the loader's first `set_high`
-    /// which only sets the idle level.
+    /// A CDONE which goes high once SCK has had `edges` rising edges, or never for `None`.
+    /// It counts every rising SCK edge since the log began, including the loader's initial `set_high`
+    /// to idle.
     pub fn cdone_after(&self, edges: Option<u32>) -> FakeCdone {
         FakeCdone {
             edges,
@@ -134,23 +178,40 @@ impl Recorder {
         Some(end.at_ns - log.entries[start].at_ns)
     }
 
+    /// The log replayed with pin levels before and after each event.
+    pub fn steps(&self) -> Vec<Step> {
+        let mut levels = Levels::default();
+        self.0
+            .borrow()
+            .entries
+            .iter()
+            .map(|e| {
+                let before = levels;
+                if let Event::Set(pin, level) = e.event {
+                    levels.set(pin, level);
+                }
+                Step {
+                    at_ns: e.at_ns,
+                    event: e.event,
+                    before,
+                    after: levels,
+                }
+            })
+            .collect()
+    }
+
+    /// All steps containing a rising edge on `pin`.
+    pub fn rising(&self, pin: Pin) -> Vec<Step> {
+        self.steps()
+            .into_iter()
+            .filter(|s| !s.before.get(pin) && s.after.get(pin))
+            .collect()
+    }
+
     /// How many times `pin` went from low to high.
     /// A repeated `set_high` or high to low is not a rising edge.
     pub fn rising_edges(&self, pin: Pin) -> u32 {
-        let mut high = false;
-        let mut count = 0;
-        for entry in self.0.borrow().entries.iter() {
-            match entry.event {
-                Event::Set(p, level) if p == pin => {
-                    if level && !high {
-                        count += 1;
-                    }
-                    high = level;
-                }
-                _ => {}
-            }
-        }
-        count
+        self.rising(pin).len() as u32
     }
 
     fn push(&self, event: Event) {
