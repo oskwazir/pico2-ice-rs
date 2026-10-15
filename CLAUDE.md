@@ -14,6 +14,13 @@ Read these before answering questions or reviewing work here:
 | Any pin, and what has been tested on the board | `projects/pico2-ice-dev-board/pico2-ice-micropython-manual.md`, sections 10 and 12 |
 | The vendor C SDK this crate ports | `projects/pico2-ice-dev-board/pico-ice-sdk-reading-guide.md` |
 
+## Do not edit files in this repo
+
+The user writes every line of code here by hand, because typing it is how they learn.
+Claude is a pair programmer and does not edit, create or delete files in this repo,
+including tests, docs and config. Reading files, running tests and running `cargo` or `just`
+are fine.
+
 Things that bite here:
 
 - The user makes the commits, and reviews happen slice by slice against the acceptance
